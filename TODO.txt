@@ -1,0 +1,3 @@
+VECTOR DATABASES - https://app.pinecone.io/organizations/-OG3bXZakBrfMbDvcse5/projects/8588f421-32f9-45c8-b542-8d66270e9f0b/models
+
+connect vector database with cargpt 
