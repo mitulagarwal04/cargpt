@@ -28,20 +28,20 @@ def consine_similarity(a, b):
 ## make the model generate the query itself so that it picks up diverse information related to the user query
 def refine_query(user_query):
     instruction = f"""
-    You are an assistant helping to refine questions. Rewrite the user's input query into smaller, relevant sub-queries if possible:
+    You are an assistant helping to refine questions. Rewrite the user's input query into smaller, relevant sub-queries :
     User query: {user_query}
     Refined queries:
     """
     response = ollama.chat(
         model=LANGUAGE_MODEL,
         messages=[
-            {"role": "system", "content": "Be concise and helpful."},
+            {"role": "system", "content": "Refine the query. Keep it simple and return only the queries."},
             {"role": "user", "content": instruction},
         ],
     )   
-    return (response)
-    # refined_query = response['content'].strip().split('\n')
-    # return [query.strip('- ') for query in refined_queries if query.strip()]
+    # return (response)
+    refined_queries = response['message']['content'].strip().split('\n')
+    return [query.strip('- ') for query in refined_queries if query.strip()]
 
 
 ## retrieve similar chunks 
@@ -62,7 +62,7 @@ def aggregrated_retrieval(user_query, top_n=3):
     all_results = []
     for sub_query in refined_queries:
         results = retrieve(sub_query, top_n=top_n)
-        all_results.expand(results)
+        all_results.extend(results)
 
     seen_chunks = set()
     unique_results = []
@@ -77,40 +77,31 @@ def aggregrated_retrieval(user_query, top_n=3):
 
 
 ## generation phase
-# input_query = input("Ask a question about cats: ")
-input_query = 'What are cats'
-response = refine_query(input_query)
+input_query = input("Ask a question about cats: ")
+# input_query = 'What are cats'
 
-# print(str(response))
+retrieved_knowledge = aggregrated_retrieval(input_query, 3)
 
-with open("output.txt", "w") as file:
-    file.write(str(response))
+print('Retrieved knowledge:')
 
-# print('--')
-# print(fr'{response}')
+instruction_prompt = f"""You are a helpful chatbot.
+Use only the following pieces of context to answer the question. Don't make up any new information:
+{chr(20).join([f' - {chunk}' for chunk, similarity in retrieved_knowledge])}
+"""
 
-# retrieved_knowledge = retrieve(input_query, 3)
+stream = ollama.chat(
+    model=LANGUAGE_MODEL,
+    messages = [
+        {'role':'system', 'content':instruction_prompt},
+        {'role':'user', 'content':input_query}
+    ],
+    stream = True
+)
 
-# print('Retrieved knowledge:')
+print(f"chatbot response: ")
 
-# instruction_prompt = f"""You are a helpful chatbot.
-# Use only the following pieces of context to answer the question. Don't make up any new information:
-# {chr(20).join([f' - {chunk}' for chunk, similarity in retrieved_knowledge])}
-# """
-
-# stream = ollama.chat(
-#     model=LANGUAGE_MODEL,
-#     messages = [
-#         {'role':'system', 'content':instruction_prompt},
-#         {'role':'user', 'content':input_query}
-#     ],
-#     stream = True
-# )
-
-# print(f"chatbot response: ")
-
-# for chunk in stream:
-#   print(chunk['message']['content'], end='', flush=True)
+for chunk in stream:
+  print(chunk['message']['content'], end='', flush=True)
 
 
 
