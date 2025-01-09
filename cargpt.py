@@ -1,5 +1,6 @@
 import ollama
 from pprint import pprint
+import torch
 
 EMBEDDING_MODEL = 'hf.co/CompendiumLabs/bge-base-en-v1.5-gguf'
 LANGUAGE_MODEL = 'hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF'
@@ -83,11 +84,21 @@ input_query = input("Ask a question about cats: ")
 retrieved_knowledge = aggregrated_retrieval(input_query, 3)
 
 print('Retrieved knowledge:')
+print(retrieved_knowledge)
+print('input queries: ')
+print(refine_query(input_query))
 
 instruction_prompt = f"""You are a helpful chatbot.
-Use only the following pieces of context to answer the question. Don't make up any new information:
+Use only the following context to answer the question. Ensure your answer is directly based on the provided context. 
+You may rephrase or organize the information if needed, but do not introduce any external knowledge. 
+If the answer cannot be reasonably inferred from the provided context, respond with "I don't know."
+Context:
 {chr(20).join([f' - {chunk}' for chunk, similarity in retrieved_knowledge])}
 """
+
+
+
+print(instruction_prompt)
 
 stream = ollama.chat(
     model=LANGUAGE_MODEL,
